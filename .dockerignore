@@ -1,0 +1,14 @@
+node_modules
+.git
+.github
+.agents
+.claude
+.dsh-build
+.vitest
+dist
+*.tsbuildinfo
+coverage
+snapshots
+tmp
+.env
+.env.local

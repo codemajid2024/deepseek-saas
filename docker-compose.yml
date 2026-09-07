@@ -1,0 +1,59 @@
+services:
+  dsh:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dsh-server
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DSH_HOME=/data/dsh
+      - DSH_AGENTS_HOME=/data/dsh/.agents
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    volumes:
+      - dsh-data:/data/dsh
+      - dsh-workspaces:/data/workspaces
+    networks:
+      - dsh-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3080/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  caddy:
+    image: caddy:2.9-alpine
+    container_name: dsh-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME:-localhost}
+      - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
+      - AUTH_USER=${AUTH_USER:-admin}
+      - AUTH_HASH_PASSWORD=${AUTH_HASH_PASSWORD}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - dsh-network
+    depends_on:
+      - dsh
+
+volumes:
+  dsh-data:
+    driver: local
+  dsh-workspaces:
+    driver: local
+  caddy-data:
+    driver: local
+  caddy-config:
+    driver: local
+
+networks:
+  dsh-network:
+    driver: bridge

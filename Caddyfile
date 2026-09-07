@@ -1,0 +1,28 @@
+{
+    # Global options
+    email {$ACME_EMAIL:admin@example.com}
+    admin off
+}
+
+{$DOMAIN_NAME:localhost} {
+    # Encode with gzip/zstd
+    encode zstd gzip
+
+    # Basic Authentication (Optionnel : activé si AUTH_USER et AUTH_HASH_PASSWORD sont définis)
+    @authenticated {
+        not path /health*
+    }
+    
+    basic_auth @authenticated {
+        {$AUTH_USER:admin} {$AUTH_HASH_PASSWORD:$2a$14$Vv6sR8nK12L7fN3vC.kPae5y6pM2zY5p3wB7jF4xK8gL6hQ9wY2Zy}
+    }
+
+    # Reverse proxy to DeepSeek Harness web container
+    reverse_proxy dsh:3080 {
+        # WebSocket support headers
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
