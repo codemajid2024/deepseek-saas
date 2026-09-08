@@ -17,15 +17,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install pnpm matching packageManager version
 RUN corepack enable && corepack prepare pnpm@11.7.0 --activate
 
-# Copy package manifests and workspace structure
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY patches ./patches
-COPY packages ./packages
-COPY apps ./apps
-COPY scripts ./scripts
-COPY vendor ./vendor
-COPY website ./website
-COPY tsconfig*.json tsdown.config.ts vitest*.ts ./
+# Copy all source files and manifests (filtered by .dockerignore)
+COPY . .
 
 # Install all dependencies
 RUN pnpm install --frozen-lockfile
