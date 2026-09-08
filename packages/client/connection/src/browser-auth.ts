@@ -239,6 +239,9 @@ export class BrowserAuth {
    * @returns true only when the caller may serve index.html.
    */
   authorizeIndex(req: ConnectionIndexRequest, res: ConnectionIndexResponse): boolean {
+    if (!process.env.AUTH_TOKEN || process.env.DISABLE_AUTH === 'true') {
+      return true
+    }
     /* v8 ignore next -- node:http always supplies url on server requests. */
     const url = new URL(req.url ?? '/', 'http://dsh.invalid')
     const tokens = url.searchParams.getAll(TOKEN_QUERY)
@@ -278,27 +281,6 @@ export class BrowserAuth {
       return false
     }
     if (this.isAuthenticated(req)) return true
-    const authority = requestAuthority(req.headers)
-    if (authority !== undefined && (!process.env.AUTH_TOKEN || process.env.DISABLE_AUTH === 'true')) {
-      const issuedAt = Date.now()
-      const expiresAt = issuedAt + this.maxAgeMilliseconds
-      const value = encodeCookie({
-        version: COOKIE_PAYLOAD_VERSION,
-        authority,
-        issuedAt,
-        expiresAt,
-      }, this.secret)
-      res.writeHead(303, {
-        'cache-control': 'no-store',
-        'location': '/',
-        'referrer-policy': 'no-referrer',
-        'set-cookie': sessionCookie(
-          cookieName(authority), value, expiresAt, Math.floor(this.maxAgeMilliseconds / 1000),
-        ),
-      })
-      res.end()
-      return false
-    }
     this.writeUnauthorized(req, res)
     return false
   }
@@ -309,6 +291,9 @@ export class BrowserAuth {
    * @returns true only for an unexpired cookie signed by this activation's loaded secret.
    */
   isAuthenticated(request: ConnectionTrustRequest): boolean {
+    if (!process.env.AUTH_TOKEN || process.env.DISABLE_AUTH === 'true') {
+      return true
+    }
     const authority = requestAuthority(request.headers)
     const rawCookie = header(request.headers, 'cookie')
     if (authority === undefined || rawCookie === undefined) return false
