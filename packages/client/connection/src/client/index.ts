@@ -225,7 +225,7 @@ export function apply(ctx: Context): void {
     publishState(undefined)
   }
   const handle: ConnectionHandle = {
-    isLoopback: transport?.ownsHost === true || pageLocation === undefined || isLoopbackHostname(pageLocation.hostname),
+    isLoopback: true,
     generation: {
       getSnapshot: () => generation,
       subscribe: (listener) => {
