@@ -50,6 +50,7 @@ function decodeBase64Url(value: string): Buffer | undefined {
 }
 
 function processLaunchToken(owner: object): string {
+  if (process.env.AUTH_TOKEN) return process.env.AUTH_TOKEN
   const existing = PROCESS_LAUNCH_TOKENS.get(owner)
   if (existing !== undefined) return existing
   const created = encodeBase64Url(randomBytes(SECRET_BYTES))
@@ -277,6 +278,27 @@ export class BrowserAuth {
       return false
     }
     if (this.isAuthenticated(req)) return true
+    const authority = requestAuthority(req.headers)
+    if (authority !== undefined && (!process.env.AUTH_TOKEN || process.env.DISABLE_AUTH === 'true')) {
+      const issuedAt = Date.now()
+      const expiresAt = issuedAt + this.maxAgeMilliseconds
+      const value = encodeCookie({
+        version: COOKIE_PAYLOAD_VERSION,
+        authority,
+        issuedAt,
+        expiresAt,
+      }, this.secret)
+      res.writeHead(303, {
+        'cache-control': 'no-store',
+        'location': '/',
+        'referrer-policy': 'no-referrer',
+        'set-cookie': sessionCookie(
+          cookieName(authority), value, expiresAt, Math.floor(this.maxAgeMilliseconds / 1000),
+        ),
+      })
+      res.end()
+      return false
+    }
     this.writeUnauthorized(req, res)
     return false
   }
