@@ -20,6 +20,9 @@ RUN corepack enable && corepack prepare pnpm@11.7.0 --activate
 # Copy all source files and manifests (filtered by .dockerignore)
 COPY . .
 
+# Set commit hash fallback for build without .git
+ENV DSH_CLIENT_COMMIT_HASH=0000000
+
 # Install all dependencies
 RUN pnpm install --frozen-lockfile
 
