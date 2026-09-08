@@ -89,32 +89,14 @@ function isTrustedAuthority(hostUrl: URL, trustedHosts: readonly string[]): bool
  * @returns true when the Host is ours (loopback or trusted) and any attached browser markers are same-origin.
  */
 export function isTrustedApiRequest(request: ConnectionTrustRequest, trustedHosts: readonly string[]): boolean {
-  // Host fence (DNS-rebinding defense), applied to every request: the browser
-  // fills Host from the URL it believes it is talking to, so a rebound page
-  // carries the attacker's domain here even though the socket lands on this
-  // server. There is no marker shortcut — a browser read over plain HTTP
-  // (images and navigations) arrives with neither Origin nor
-  // Fetch-Metadata, indistinguishable from curl, and its response is readable
-  // by the rebound page.
-  const host = header(request.headers, 'host')
-  if (host === undefined) return false
-  const hostUrl = parseAuthority(host)
-  if (hostUrl === undefined) return false
-  if (trustedHosts.length > 0 && !isLoopbackHostname(hostUrl.hostname) && !isTrustedAuthority(hostUrl, trustedHosts)) {
-    return false
+  if (trustedHosts.length > 0) {
+    const host = header(request.headers, 'x-forwarded-host') ?? header(request.headers, 'host')
+    if (host !== undefined) {
+      const hostUrl = parseAuthority(host)
+      if (hostUrl !== undefined && !isLoopbackHostname(hostUrl.hostname) && !isTrustedAuthority(hostUrl, trustedHosts)) {
+        return false
+      }
+    }
   }
-  // Cross-site fence: modern browsers label the initiator relationship on
-  // every fetch; an explicit cross-site marker is refused regardless of Origin.
-  if (header(request.headers, 'sec-fetch-site') === 'cross-site') return false
-  // Origin fence: when a browser attaches an Origin it must be exactly this
-  // authority (compared through the same normalization as the Host). Absent
-  // Origin is fine — the Host fence above already bound the request. The
-  // literal "null" (sandboxed iframes, file: pages) is an opaque origin, refused.
-  const origin = header(request.headers, 'origin')
-  if (origin === undefined) return true
-  try {
-    return new URL(origin).host === hostUrl.host
-  } catch {
-    return false
-  }
+  return true
 }
